@@ -1,0 +1,84 @@
+import os
+import streamlit as st
+import pickle
+import time
+from sentence_transformers import SentenceTransformer
+import faiss
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.document_loaders import UnstructuredURLLoader
+
+# Load environment variables (if needed)
+from dotenv import load_dotenv
+load_dotenv()
+
+st.title("RockyBot: News Research Tool 📊")
+st.sidebar.title("News Article URLs")
+
+urls = []
+for i in range(3):
+    url = st.sidebar.text_input(f"URL {i+1}")
+    urls.append(url)
+
+process_url_clicked = st.sidebar.button("Process URLs")
+file_path = "faiss_store_sentence_transformer.pkl"
+
+main_placeholder = st.empty()
+
+# Load Sentence Transformer model
+st_model = SentenceTransformer('all-MiniLM-L6-v2')  # Lightweight and efficient model
+
+if process_url_clicked:
+    # Load data
+    loader = UnstructuredURLLoader(urls=urls)
+    main_placeholder.text("Data Loading...Started...✅✅✅")
+    data = loader.load()
+
+    # Split data
+    text_splitter = RecursiveCharacterTextSplitter(
+        separators=['\n\n', '\n', '.', ','],
+        chunk_size=1000
+    )
+    main_placeholder.text("Text Splitter...Started...✅✅✅")
+    docs = text_splitter.split_documents(data)
+
+    # Prepare documents for embeddings
+    texts = [doc.page_content for doc in docs]
+    main_placeholder.text("Generating Embeddings...Started...✅✅✅")
+
+    # Generate embeddings using Sentence Transformer
+    embeddings = st_model.encode(texts, show_progress_bar=True)
+
+    # Build FAISS index
+    dimension = embeddings.shape[1]
+    faiss_index = faiss.IndexFlatL2(dimension)
+    faiss_index.add(embeddings)
+
+    # Save the FAISS index and documents to a pickle file
+    with open(file_path, "wb") as f:
+        pickle.dump({"index": faiss_index, "docs": docs}, f)
+
+    main_placeholder.text("FAISS Index Built and Saved...✅✅✅")
+    time.sleep(2)
+
+query = main_placeholder.text_input("Question: ")
+if query:
+    if os.path.exists(file_path):
+        with open(file_path, "rb") as f:
+            data = pickle.load(f)
+            faiss_index = data["index"]
+            docs = data["docs"]
+
+        # Generate query embedding
+        query_embedding = st_model.encode([query])
+
+        # Perform similarity search
+        distances, indices = faiss_index.search(query_embedding, k=5)
+
+        # Retrieve top results
+        results = [(docs[idx].page_content, distances[i]) for i, idx in enumerate(indices[0])]
+
+        st.header("Answer")
+        for i, (content, distance) in enumerate(results):
+            st.subheader(f"Result {i + 1}")
+            st.write(content)
+            st.caption(f"Relevance Score: {1 - distance:.2f}")
