@@ -9,7 +9,7 @@ The **News Research Tool** is an AI-powered application that enables users to pe
 ✔ **LangChain Processing** – Efficiently loads and splits text for better search results.  
 ✔ **Interactive Chatbot (Streamlit UI)** – A research assistant with a web-based interface.  
 ✔ **CSV & Text Support** – Works with structured (CSV) and unstructured (TXT) data.  
-✔ **Easy Deployment** – Can be hosted locally or on cloud platforms like Streamlit Sharing.  Here's the updated **README.md** incorporating **Streamlit** for the user interface:  
+✔ **Easy Deployment** – Can be hosted locally or on cloud platforms like Streamlit Sharing.    
   
 
 ## **Installation**  
